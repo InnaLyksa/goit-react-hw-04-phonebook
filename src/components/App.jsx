@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -8,23 +8,17 @@ import { saveToLocalStorage, getFromLocalStorage } from '../utils/localStorage';
 
 const KEY_CONTACTS = 'contacts';
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export function App() {
+  const [contacts, setContacts] = useState(
+    () => getFromLocalStorage(KEY_CONTACTS) ?? []
+  );
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    this.setState({ contacts: getFromLocalStorage(KEY_CONTACTS) });
-  }
+  useEffect(() => {
+    saveToLocalStorage(KEY_CONTACTS, contacts);
+  }, [contacts]);
 
-  componentDidUpdate(_, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      saveToLocalStorage(KEY_CONTACTS, this.state.contacts);
-    }
-  }
-
-  addContact = (newName, newNumber) => {
+  const addContact = (newName, newNumber) => {
     const newContact = {
       id: nanoid(),
       name: newName,
@@ -33,45 +27,36 @@ export class App extends Component {
 
     const { name, number } = newContact;
 
-    if (this.checkedDublicateName(name)) {
+    if (checkedDublicateName(name)) {
       toast.warn(`${name} is already in contacts`, {
         position: 'top-center',
         autoClose: 2000,
         theme: 'colored',
       });
-    } else if (this.checkedDublicateNumber(number)) {
+    } else if (checkedDublicateNumber(number)) {
       toast.warn(`${number} is already in contacts`, {
         position: 'top-center',
         autoClose: 2000,
         theme: 'colored',
       });
     } else {
-      this.setState(({ contacts }) => ({
-        contacts: [newContact, ...contacts],
-      }));
+      setContacts(contacts => [newContact, ...contacts]);
     }
   };
 
-  checkedDublicateNumber = dublicateNumber =>
-    this.state.contacts.find(contact => contact.number === dublicateNumber);
+  const checkedDublicateNumber = dublicateNumber =>
+    contacts.find(contact => contact.number === dublicateNumber);
 
-  checkedDublicateName = dublicateName =>
-    this.state.contacts.find(
+  const checkedDublicateName = dublicateName =>
+    contacts.find(
       contact => contact.name.toLowerCase() === dublicateName.toLowerCase()
     );
 
-  deleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const changeFilter = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
-  };
-
-  getFilteredContacts = () => {
-    const { contacts, filter } = this.state;
+  const getFilteredContacts = () => {
     const normalizedFilter = filter.toLowerCase();
     const filteredContacts = contacts.filter(contact =>
       contact.name.toLowerCase().includes(normalizedFilter)
@@ -79,26 +64,21 @@ export class App extends Component {
     return filteredContacts;
   };
 
-  render() {
-    const {
-      state,
-      addContact,
-      deleteContact,
-      changeFilter,
-      getFilteredContacts,
-    } = this;
-    return (
-      <Container>
-        <PageHeader>Phonebook</PageHeader>
-        <ContactForm onSubmit={addContact} />
-        <SectionHeader>Contacts</SectionHeader>
-        <Filter value={state.filter} onChange={changeFilter} />
-        <ContactList
-          contacts={getFilteredContacts()}
-          deleteContact={deleteContact}
-        />
-        <ToastContainer />
-      </Container>
-    );
-  }
+  const deleteContact = id => {
+    setContacts(contacts => contacts.filter(contact => contact.id !== id));
+  };
+
+  return (
+    <Container>
+      <PageHeader>Phonebook</PageHeader>
+      <ContactForm onSubmit={addContact} />
+      <SectionHeader>Contacts</SectionHeader>
+      <Filter value={filter} onChange={changeFilter} />
+      <ContactList
+        contacts={getFilteredContacts()}
+        deleteContact={deleteContact}
+      />
+      <ToastContainer />
+    </Container>
+  );
 }
